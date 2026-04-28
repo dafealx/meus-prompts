@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Meus Prompts · Cloud</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14181d;
+    --panel-2: #1a1f26;
+    --panel-3: #20262e;
+    --border: #232931;
+    --border-2: #2d343d;
+    --text: #e8edf3;
+    --muted: #8a95a3;
+    --muted-2: #5b6573;
+    --accent: #6ea8ff;
+    --accent-2: #a78bfa;
+    --green: #34d399;
+    --pink: #f472b6;
+    --yellow: #fbbf24;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overscroll-behavior: none; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea {
+    font-family: inherit;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.12s;
+    width: 100%;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; line-height: 1.55; }
+
+  header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .header-search { flex: 1; min-width: 200px; max-width: 480px; }
+  .header-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+  .btn {
+    padding: 7px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    transition: all 0.12s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--panel-2); border-color: var(--border-2); }
+  .btn-primary { background: var(--accent); color: #0b0d10; border-color: var(--accent); font-weight: 600; }
+  .btn-primary:hover { background: #8bb8ff; }
+  .btn-danger:hover { background: #2a1a1d; border-color: var(--red); color: var(--red); }
+
+  .sync-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .sync-pill:hover { border-color: var(--border-2); }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted-2); }
+  .sync-pill.idle .sync-dot { background: var(--muted-2); }
+  .sync-pill.syncing .sync-dot { background: var(--yellow); animation: pulse 1s infinite; }
+  .sync-pill.synced .sync-dot { background: var(--green); }
+  .sync-pill.error .sync-dot { background: var(--red); }
+  .sync-pill.off .sync-dot { background: var(--muted-2); }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.3 } }
+
+  .layout { flex: 1; display: grid; grid-template-columns: 260px 1fr; overflow: hidden; }
+  aside {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px 8px;
+    background: #0e1115;
+  }
+  main { overflow-y: auto; padding: 20px 28px; }
+
+  .sidebar-toggle { display: none; }
+
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    aside {
+      position: fixed;
+      top: 56px; bottom: 0; left: 0;
+      width: 84%;
+      max-width: 320px;
+      z-index: 30;
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+    aside.open { transform: translateX(0); }
+    .sidebar-toggle { display: inline-flex; }
+    main { padding: 16px; }
+    .header-search { order: 99; flex-basis: 100%; max-width: 100%; }
+    h1 { font-size: 14px; }
+  }
+
+  .cat { margin-bottom: 4px; }
+  .cat-header {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 10px; border-radius: 5px; cursor: pointer; user-select: none;
+  }
+  .cat-header:hover { background: var(--panel); }
+  .cat-name {
+    flex: 1; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .cat-count {
+    font-size: 10px; color: var(--muted-2); font-variant-numeric: tabular-nums;
+    padding: 1px 6px; background: var(--panel); border-radius: 999px;
+  }
+  .cat-arrow { color: var(--muted-2); font-size: 10px; transition: transform 0.15s; width: 12px; display: inline-block; }
+  .cat.collapsed .cat-arrow { transform: rotate(-90deg); }
+  .cat.collapsed .sub-list { display: none; }
+
+  .sub-list { margin: 2px 0 6px 14px; border-left: 1px solid var(--border); padding-left: 4px; }
+  .sub {
+    padding: 5px 8px; border-radius: 5px; font-size: 12px;
+    color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sub:hover { background: var(--panel); color: var(--text); }
+  .sub.active { background: var(--panel-2); color: var(--accent); font-weight: 500; }
+  .sub-count { margin-left: auto; font-size: 10px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+
+  .sidebar-section-title {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted-2); padding: 12px 10px 4px;
+  }
+  .sidebar-action {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 5px;
+    font-size: 12px; color: var(--muted); cursor: pointer; width: 100%;
+  }
+  .sidebar-action:hover { background: var(--panel); color: var(--text); }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); margin-bottom: 14px;
+  }
+  .breadcrumb .sep { color: var(--muted-2); }
+  .breadcrumb .current { color: var(--text); font-weight: 500; }
+
+  .view-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .view-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .view-meta { color: var(--muted); font-size: 12px; }
+
+  .prompt-list { display: flex; flex-direction: column; gap: 10px; }
+  .prompt {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .prompt:hover { border-color: var(--border-2); }
+  .prompt-head {
+    padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  .prompt-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .prompt-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tag {
+    font-size: 10px; padding: 2px 7px; border-radius: 999px;
+    background: var(--panel-3); color: var(--muted); font-weight: 500;
+  }
+  .prompt-body {
+    padding: 0 14px 14px;
+    border-top: 1px solid var(--border);
+    display: none;
+  }
+  .prompt.open .prompt-body { display: block; }
+  .prompt.open .prompt-arrow { transform: rotate(90deg); }
+  .prompt-arrow { color: var(--muted-2); font-size: 10px; transition: transform 0.15s; }
+  .prompt-text {
+    margin-top: 12px; padding: 12px;
+    background: #0a0c10; border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; line-height: 1.6;
+    white-space: pre-wrap; color: #d4dae3;
+    max-height: 420px; overflow-y: auto;
+  }
+  .prompt-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .prompt-meta { font-size: 10px; color: var(--muted-2); margin-top: 6px; text-align: right; }
+
+  .empty {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .empty h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 50; padding: 16px;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border-2);
+    border-radius: 12px;
+    width: 100%; max-width: 720px; max-height: 90vh;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .modal-head {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+  }
+  .modal-title { font-size: 14px; font-weight: 700; }
+  .modal-close { margin-left: auto; color: var(--muted); font-size: 20px; line-height: 1; padding: 2px 8px; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body {
+    padding: 16px 18px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } }
+  .field .hint { font-size: 11px; color: var(--muted-2); }
+  .field .hint a { color: var(--accent); }
+  .modal-foot {
+    padding: 12px 18px; border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap;
+  }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel-2); border: 1px solid var(--border-2);
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 12px; color: var(--text);
+    opacity: 0; transition: all 0.2s;
+    z-index: 100; pointer-events: none;
+    max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.success { border-color: var(--green); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="btn sidebar-toggle" id="btn-menu">☰</button>
+  <h1>Meus Prompts</h1>
+  <div class="header-search">
+    <input type="search" id="search" placeholder="Buscar…">
+  </div>
+  <div class="header-actions">
+    <button class="sync-pill off" id="sync-pill" title="Configurar sync">
+      <span class="sync-dot"></span><span id="sync-label">Offline</span>
+    </button>
+    <button class="btn" id="btn-settings" title="Configurações">⚙</button>
+    <button class="btn btn-primary" id="btn-new">＋ Novo</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main id="main"></main>
+</div>
+
+<!-- Modal: Edit/New Prompt -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title">Novo prompt</span>
+      <button class="modal-close" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Título</label>
+        <input type="text" id="f-title" placeholder="Ex: Vídeo promocional vertical">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Categoria</label>
+          <input type="text" id="f-cat" list="cats" placeholder="Ex: Marketing">
+          <datalist id="cats"></datalist>
+        </div>
+        <div class="field">
+          <label>Subcategoria</label>
+          <input type="text" id="f-sub" list="subs" placeholder="Ex: Criação de Vídeo">
+          <datalist id="subs"></datalist>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tags (vírgula)</label>
+        <input type="text" id="f-tags" placeholder="ex: vertical, 9:16, madeira">
+      </div>
+      <div class="field">
+        <label>Prompt</label>
+        <textarea id="f-text" rows="14" placeholder="Cole aqui o texto do prompt..."></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Settings (Cloud Sync) -->
+<div class="modal-bg" id="settings-bg">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">Configurações · Sincronização na nuvem</span>
+      <button class="modal-close" id="settings-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">
+        Sincroniza seus prompts com um <strong>GitHub Gist privado</strong>. Funciona em qualquer dispositivo (PC, celular).
+        Cole esta página em um Gist público / hospede em GitHub Pages e use de qualquer lugar.
+      </div>
+
+      <div class="field">
+        <label>1 · GitHub Personal Access Token (PAT)</label>
+        <input type="password" id="s-pat" placeholder="ghp_... (escopo: gist)">
+        <span class="hint">
+          Crie em
+          <a href="https://github.com/settings/tokens/new?scopes=gist&description=meus-prompts" target="_blank" rel="noopener">github.com/settings/tokens</a>
+          marcando apenas o escopo <code>gist</code>. Guardado só neste navegador.
+        </span>
+      </div>
+
+      <div class="field">
+        <label>2 · Gist ID</label>
+        <input type="text" id="s-gist" placeholder="cole o ID, ou clique em 'Criar gist'">
+        <span class="hint">
+          O ID é a parte final da URL: <code>github.com/USER/&lt;ID&gt;</code>.
+        </span>
+      </div>
+
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text);">
+          <input type="checkbox" id="s-auto" style="width:auto"> Auto-sync ao salvar/editar
+        </label>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+        <button class="btn" id="s-create">＋ Criar gist novo</button>
+        <button class="btn" id="s-pull">⇣ Puxar agora</button>
+        <button class="btn" id="s-push">⇡ Enviar agora</button>
+        <button class="btn btn-danger" id="s-disconnect" style="margin-left:auto">Desconectar</button>
+      </div>
+
+      <div id="s-status" style="font-size:12px;color:var(--muted);min-height:16px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="settings-cancel">Fechar</button>
+      <button class="btn btn-primary" id="settings-save">Salvar config</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'socialflow.prompts.v1';
+const CONFIG_KEY = 'socialflow.prompts.config.v1';
+const META_KEY = 'socialflow.prompts.meta.v1';
+
+const SEED = [
+  {
+    id: rid(),
+    title: 'Vídeo promocional vertical 9:16 — peças de madeira',
+    category: 'Marketing',
+    subcategory: 'Criação de Vídeo',
+    tags: ['vertical', '9:16', 'cinematográfico', 'madeira'],
+    text: `Crie um vídeo promocional vertical de altíssima qualidade em formato 9:16 (1080x1920), cinematográfico e ultra realista, com duração total de 10-12 segundos.
+
+Utilize **exatamente** a foto anexada como referência principal em todas as cenas. Mantenha fidelidade absoluta às peças de madeira: não altere NADA — nem a posição dos elementos, nem a textura, nem os veios naturais, nem os nós, nem a cor, tonalidade, brilho ou qualquer detalhe da madeira. Tudo deve permanecer 100% idêntico à foto original.
+
+O vídeo deve ter exatamente **5 cenas** com ângulos de câmera diferentes e dinâmicos (close-up detalhado da textura, ângulo 45°, vista lateral com profundidade, rotação suave em perspectiva aérea e plano mais aberto).
+
+• Nos **primeiros 2 segundos**: inclua exatamente 2 transições rápidas de cena (3 shots impactantes e rápidos para prender a atenção imediatamente).
+• Entre as cenas restantes: utilize transições suaves, elegantes e profissionais (smooth zoom, parallax sutil, light flares leves ou dissolve cinematográfico).
+
+Estilo visual: iluminação premium de estúdio, movimento de câmera fluido e sofisticado, sensação de produto artesanal de alto padrão, cores fiéis e vibrantes.
+
+Trilha sonora: música animada, upbeat, energética, funky e alegre no estilo Bruno Mars — groove contagiante, pop-funk/soul moderno, batida positiva e divertida.`,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  }
+];
+
+function rid() { return 'p_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+
+let state = loadLocal();
+let config = loadConfig();
+let meta = loadMeta();
+let selected = { cat: null, sub: null };
+let editingId = null;
+let collapsedCats = new Set();
+let pushTimer = null;
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) { localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED)); return [...SEED]; }
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [...SEED];
+  } catch { return [...SEED]; }
+}
+function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}; } catch { return {}; }
+}
+function saveConfig() { localStorage.setItem(CONFIG_KEY, JSON.stringify(config)); }
+function loadMeta() {
+  try { return JSON.parse(localStorage.getItem(META_KEY)) || {}; } catch { return {}; }
+}
+function saveMeta() { localStorage.setItem(META_KEY, JSON.stringify(meta)); }
+
+function setSync(stateName, label) {
+  const pill = document.getElementById('sync-pill');
+  pill.classList.remove('idle','syncing','synced','error','off');
+  pill.classList.add(stateName);
+  document.getElementById('sync-label').textContent = label;
+}
+
+const GIST_FILENAME = 'meus-prompts.json';
+
+async function gistRequest(method, path, body) {
+  if (!config.pat) throw new Error('Sem token. Configure em ⚙');
+  const res = await fetch('https://api.github.com' + path, {
+    method,
+    headers: {
+      'Authorization': 'Bearer ' + config.pat,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`${res.status}: ${txt.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+async function gistCreate() {
+  const data = await gistRequest('POST', '/gists', {
+    description: 'Meus Prompts — sync',
+    public: false,
+    files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } },
+  });
+  return { id: data.id, url: data.html_url, updated_at: data.updated_at };
+}
+
+async function gistGet() {
+  const data = await gistRequest('GET', '/gists/' + config.gistId);
+  const file = data.files[GIST_FILENAME];
+  if (!file) throw new Error(`Arquivo ${GIST_FILENAME} não encontrado no gist`);
+  let content = file.content;
+  if (file.truncated && file.raw_url) {
+    const res = await fetch(file.raw_url);
+    content = await res.text();
+  }
+  let arr;
+  try { arr = JSON.parse(content); } catch { throw new Error('JSON inválido no gist'); }
+  if (!Array.isArray(arr)) throw new Error('Conteúdo do gist não é array');
+  return { items: arr, updated_at: data.updated_at };
+}
+
+async function gistPut() {
+  const data = await gistRequest('PATCH', '/gists/' + config.gistId, {
+    files: { [GIST_FILENAME]: { content: JSON.stringify(state, null, 2) } },
+  });
+  return { updated_at: data.updated_at };
+}
+
+async function pullFromCloud(silent = false) {
+  if (!config.pat || !config.gistId) {
+    if (!silent) toast('Configure o sync primeiro (⚙)', 'error');
+    return;
+  }
+  setSync('syncing', 'Puxando…');
+  try {
+    const { items, updated_at } = await gistGet();
+    state = items;
+    saveLocal();
+    meta.lastPull = Date.now();
+    meta.cloudUpdated = updated_at;
+    saveMeta();
+    renderSidebar(); renderMain();
+    setSync('synced', 'Sincronizado');
+    if (!silent) toast('Puxado da nuvem ✓', 'success');
+  } catch (e) {
+    setSync('error', 'Erro');
+    toast('Falhou: ' + e.message, 'error');
+  }
+}
+
+async function pushToCloud(silent = false) {
+  if (!config.pat || !config.gistId) {
+    if (!silent) toast('Configure o sync primeiro (⚙)', 'error');
+    return;
+  }
+  setSync('syncing', 'Enviando…');
+  try {
+    const { updated_at } = await gistPut();
+    meta.lastPush = Date.now();
+    meta.cloudUpdated = updated_at;
+    saveMeta();
+    setSync('synced', 'Sincronizado');
+    if (!silent) toast('Enviado ✓', 'success');
+  } catch (e) {
+    setSync('error', 'Erro');
+    toast('Falhou: ' + e.message, 'error');
+  }
+}
+
+function schedulePush() {
+  if (!config.pat || !config.gistId || !config.autoSync) return;
+  clearTimeout(pushTimer);
+  setSync('syncing', 'Aguardando…');
+  pushTimer = setTimeout(() => pushToCloud(true), 1500);
+}
+
+function groupByCat() {
+  const g = {};
+  state.forEach(p => {
+    const c = p.category || 'Sem categoria';
+    const s = p.subcategory || 'Geral';
+    g[c] = g[c] || {};
+    g[c][s] = g[c][s] || [];
+    g[c][s].push(p);
+  });
+  return g;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  const grouped = groupByCat();
+  const cats = Object.keys(grouped).sort((a,b)=>a.localeCompare(b,'pt'));
+  let html = `
+    <div class="sub ${!selected.cat ? 'active' : ''}" data-all="1">
+      <span>📋</span><span style="flex:1">Todos</span>
+      <span class="sub-count">${state.length}</span>
+    </div>
+    <div class="sidebar-section-title">Categorias</div>
+  `;
+  cats.forEach(c => {
+    const subs = Object.keys(grouped[c]).sort((a,b)=>a.localeCompare(b,'pt'));
+    const total = subs.reduce((a,s)=>a+grouped[c][s].length, 0);
+    const collapsed = collapsedCats.has(c) ? 'collapsed' : '';
+    html += `
+      <div class="cat ${collapsed}" data-cat="${esc(c)}">
+        <div class="cat-header">
+          <span class="cat-arrow">▼</span>
+          <span class="cat-name">${esc(c)}</span>
+          <span class="cat-count">${total}</span>
+        </div>
+        <div class="sub-list">
+          ${subs.map(s => `
+            <div class="sub ${selected.cat===c && selected.sub===s ? 'active' : ''}" data-cat="${esc(c)}" data-sub="${esc(s)}">
+              <span>·</span><span>${esc(s)}</span>
+              <span class="sub-count">${grouped[c][s].length}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  });
+  html += `
+    <div class="sidebar-section-title">Ações</div>
+    <button class="sidebar-action" id="action-new-cat">＋ Novo prompt</button>
+    <button class="sidebar-action" id="action-export">⤓ Exportar JSON</button>
+    <button class="sidebar-action" id="action-import">⤒ Importar JSON</button>
+    <input type="file" id="file-import" accept="application/json" style="display:none">
+  `;
+  sb.innerHTML = html;
+
+  sb.querySelectorAll('.cat-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const cat = h.parentElement.dataset.cat;
+      collapsedCats.has(cat) ? collapsedCats.delete(cat) : collapsedCats.add(cat);
+      renderSidebar();
+    });
+  });
+  sb.querySelectorAll('.sub[data-sub]').forEach(el => {
+    el.addEventListener('click', () => {
+      selected = { cat: el.dataset.cat, sub: el.dataset.sub };
+      renderSidebar(); renderMain();
+      sb.classList.remove('open');
+    });
+  });
+  const allEl = sb.querySelector('.sub[data-all]');
+  if (allEl) allEl.addEventListener('click', () => {
+    selected = { cat: null, sub: null };
+    renderSidebar(); renderMain();
+    sb.classList.remove('open');
+  });
+  document.getElementById('action-new-cat').addEventListener('click', () => openModal(null));
+  document.getElementById('action-export').addEventListener('click', exportJson);
+  document.getElementById('action-import').addEventListener('click', () => document.getElementById('file-import').click());
+  document.getElementById('file-import').addEventListener('change', importJson);
+}
+
+function renderMain() {
+  const main = document.getElementById('main');
+  const q = (document.getElementById('search').value || '').trim().toLowerCase();
+  let items = state;
+  if (selected.cat) items = items.filter(p => (p.category||'Sem categoria') === selected.cat);
+  if (selected.sub) items = items.filter(p => (p.subcategory||'Geral') === selected.sub);
+  if (q) items = items.filter(p =>
+    (p.title||'').toLowerCase().includes(q) ||
+    (p.text||'').toLowerCase().includes(q) ||
+    (p.tags||[]).some(t => t.toLowerCase().includes(q))
+  );
+
+  let title = 'Todos os prompts', crumb = '';
+  if (selected.cat) {
+    title = selected.sub || selected.cat;
+    crumb = `<span>${esc(selected.cat)}</span>` + (selected.sub ? ` <span class="sep">›</span> <span class="current">${esc(selected.sub)}</span>` : '');
+  }
+
+  let html = `
+    ${crumb ? `<div class="breadcrumb">${crumb}</div>` : ''}
+    <div class="view-header">
+      <div class="view-title">${esc(title)}</div>
+      <div class="view-meta">${items.length} prompt${items.length===1?'':'s'}</div>
+    </div>
+  `;
+
+  if (items.length === 0) {
+    html += `<div class="empty"><h3>Nenhum prompt aqui</h3><p>Clique em "＋ Novo" pra adicionar.</p></div>`;
+  } else {
+    html += `<div class="prompt-list">`;
+    items.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(p => {
+      const tagsHtml = (p.tags||[]).map(t => `<span class="tag">${esc(t)}</span>`).join('');
+      html += `
+        <div class="prompt" data-id="${p.id}">
+          <div class="prompt-head">
+            <span class="prompt-arrow">▶</span>
+            <span class="prompt-title">${esc(p.title || '(sem título)')}</span>
+            <span class="prompt-tags">${tagsHtml}</span>
+          </div>
+          <div class="prompt-body">
+            <div class="prompt-text">${esc(p.text || '')}</div>
+            <div class="prompt-actions">
+              <button class="btn" data-act="copy">⧉ Copiar</button>
+              <button class="btn" data-act="edit">✎ Editar</button>
+              <button class="btn btn-danger" data-act="delete">🗑 Excluir</button>
+            </div>
+            <div class="prompt-meta">
+              ${p.category ? esc(p.category) : ''}${p.subcategory ? ' › ' + esc(p.subcategory) : ''}
+              · atualizado ${fmtDate(p.updatedAt)}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+  main.innerHTML = html;
+
+  main.querySelectorAll('.prompt').forEach(el => {
+    const id = el.dataset.id;
+    el.querySelector('.prompt-head').addEventListener('click', () => el.classList.toggle('open'));
+    el.querySelectorAll('[data-act]').forEach(b => {
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        const act = b.dataset.act;
+        const p = state.find(x => x.id === id);
+        if (!p) return;
+        if (act === 'copy') {
+          navigator.clipboard.writeText(p.text || '').then(()=>toast('Copiado ✓','success')).catch(()=>toast('Falha ao copiar','error'));
+        } else if (act === 'edit') openModal(p);
+        else if (act === 'delete') {
+          if (confirm('Excluir este prompt?')) {
+            state = state.filter(x => x.id !== id);
+            saveLocal(); renderSidebar(); renderMain();
+            toast('Excluído','success');
+            schedulePush();
+          }
+        }
+      });
+    });
+  });
+}
+
+function openModal(prompt) {
+  editingId = prompt ? prompt.id : null;
+  document.getElementById('modal-title').textContent = prompt ? 'Editar prompt' : 'Novo prompt';
+  document.getElementById('f-title').value = prompt?.title || '';
+  document.getElementById('f-cat').value = prompt?.category || selected.cat || '';
+  document.getElementById('f-sub').value = prompt?.subcategory || selected.sub || '';
+  document.getElementById('f-tags').value = (prompt?.tags || []).join(', ');
+  document.getElementById('f-text').value = prompt?.text || '';
+  refreshDatalists();
+  document.getElementById('modal-bg').classList.add('show');
+  setTimeout(()=>document.getElementById('f-title').focus(), 50);
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('show');
+  editingId = null;
+}
+function refreshDatalists() {
+  const cats = [...new Set(state.map(p => p.category).filter(Boolean))];
+  const subs = [...new Set(state.map(p => p.subcategory).filter(Boolean))];
+  document.getElementById('cats').innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join('');
+  document.getElementById('subs').innerHTML = subs.map(s=>`<option value="${esc(s)}">`).join('');
+}
+
+function exportJson() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `meus-prompts-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Exportado ✓','success');
+}
+function importJson(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const arr = JSON.parse(reader.result);
+      if (!Array.isArray(arr)) throw 0;
+      if (confirm(`Importar ${arr.length} prompt(s)? Adicionará aos existentes.`)) {
+        arr.forEach(p => { if (!p.id) p.id = rid(); if (!state.find(x=>x.id===p.id)) state.push(p); });
+        saveLocal(); renderSidebar(); renderMain();
+        toast('Importado ✓','success'); schedulePush();
+      }
+    } catch { toast('JSON inválido','error'); }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+}
+
+document.getElementById('btn-new').addEventListener('click', () => openModal(null));
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('btn-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-bg').addEventListener('click', e => { if (e.target.id === 'modal-bg') closeModal(); });
+document.getElementById('btn-save').addEventListener('click', () => {
+  const title = document.getElementById('f-title').value.trim();
+  const category = document.getElementById('f-cat').value.trim();
+  const subcategory = document.getElementById('f-sub').value.trim();
+  const tags = document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const text = document.getElementById('f-text').value;
+  if (!title || !text.trim()) { toast('Título e prompt são obrigatórios','error'); return; }
+  const now = Date.now();
+  if (editingId) {
+    const p = state.find(x => x.id === editingId);
+    if (p) Object.assign(p, { title, category, subcategory, tags, text, updatedAt: now });
+  } else {
+    state.push({ id: rid(), title, category, subcategory, tags, text, createdAt: now, updatedAt: now });
+  }
+  saveLocal(); closeModal(); renderSidebar(); renderMain();
+  toast('Salvo ✓','success'); schedulePush();
+});
+
+document.getElementById('search').addEventListener('input', renderMain);
+
+// Sidebar toggle (mobile)
+document.getElementById('btn-menu').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// Settings modal
+function openSettings() {
+  document.getElementById('s-pat').value = config.pat || '';
+  document.getElementById('s-gist').value = config.gistId || '';
+  document.getElementById('s-auto').checked = !!config.autoSync;
+  updateSettingsStatus();
+  document.getElementById('settings-bg').classList.add('show');
+}
+function closeSettings() { document.getElementById('settings-bg').classList.remove('show'); }
+function updateSettingsStatus() {
+  const el = document.getElementById('s-status');
+  const parts = [];
+  if (meta.lastPull) parts.push('Último pull: ' + fmtDate(meta.lastPull));
+  if (meta.lastPush) parts.push('Último push: ' + fmtDate(meta.lastPush));
+  if (config.gistId) parts.push(`Gist: <a href="https://gist.github.com/${esc(config.gistId)}" target="_blank" style="color:var(--accent)">${esc(config.gistId).slice(0,12)}…</a>`);
+  el.innerHTML = parts.join(' · ') || 'Nenhum sync feito ainda.';
+}
+
+document.getElementById('btn-settings').addEventListener('click', openSettings);
+document.getElementById('sync-pill').addEventListener('click', openSettings);
+document.getElementById('settings-close').addEventListener('click', closeSettings);
+document.getElementById('settings-cancel').addEventListener('click', closeSettings);
+document.getElementById('settings-bg').addEventListener('click', e => { if (e.target.id === 'settings-bg') closeSettings(); });
+document.getElementById('settings-save').addEventListener('click', () => {
+  config.pat = document.getElementById('s-pat').value.trim();
+  config.gistId = document.getElementById('s-gist').value.trim();
+  config.autoSync = document.getElementById('s-auto').checked;
+  saveConfig();
+  toast('Config salva ✓','success');
+  refreshSyncPill();
+  closeSettings();
+});
+document.getElementById('s-create').addEventListener('click', async () => {
+  const pat = document.getElementById('s-pat').value.trim();
+  if (!pat) { toast('Cole o PAT primeiro','error'); return; }
+  config.pat = pat; saveConfig();
+  setSync('syncing', 'Criando…');
+  try {
+    const r = await gistCreate();
+    config.gistId = r.id; saveConfig();
+    document.getElementById('s-gist').value = r.id;
+    meta.lastPush = Date.now(); meta.cloudUpdated = r.updated_at; saveMeta();
+    setSync('synced', 'Sincronizado');
+    updateSettingsStatus();
+    toast('Gist criado ✓','success');
+  } catch (e) {
+    setSync('error','Erro');
+    toast('Falhou: ' + e.message, 'error');
+  }
+});
+document.getElementById('s-pull').addEventListener('click', async () => {
+  config.pat = document.getElementById('s-pat').value.trim();
+  config.gistId = document.getElementById('s-gist').value.trim();
+  saveConfig();
+  await pullFromCloud();
+  updateSettingsStatus();
+});
+document.getElementById('s-push').addEventListener('click', async () => {
+  config.pat = document.getElementById('s-pat').value.trim();
+  config.gistId = document.getElementById('s-gist').value.trim();
+  saveConfig();
+  await pushToCloud();
+  updateSettingsStatus();
+});
+document.getElementById('s-disconnect').addEventListener('click', () => {
+  if (!confirm('Desconectar sync? Os prompts locais permanecem.')) return;
+  config = {}; saveConfig();
+  document.getElementById('s-pat').value = '';
+  document.getElementById('s-gist').value = '';
+  document.getElementById('s-auto').checked = false;
+  refreshSyncPill();
+  toast('Desconectado','success');
+});
+
+function refreshSyncPill() {
+  if (!config.pat || !config.gistId) {
+    setSync('off', 'Offline');
+  } else {
+    setSync('idle', config.autoSync ? 'Auto-sync ON' : 'Sync manual');
+  }
+}
+
+let toastTimer;
+function toast(msg, kind) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('error','success');
+  if (kind) t.classList.add(kind);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+// Boot
+renderSidebar();
+renderMain();
+refreshSyncPill();
+// On load, if configured: pull silently to get latest from other devices
+if (config.pat && config.gistId) {
+  pullFromCloud(true);
+}
+</script>
+</body>
+</html>
